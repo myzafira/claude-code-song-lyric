@@ -127,6 +127,8 @@ a.btn { display: inline-block; text-decoration: none; }
 .stage-img.video { container-type: size; display: flex; align-items: center; justify-content: center; }
 .video-box { width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9; transform-origin: 50% 88%; transition: transform 0.2s; }
 .video-box .video-host { width: 100%; height: 100%; }
+.video-wrap { position: relative; width: 100%; height: 100%; }
+.unmute-btn { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; font-size: 1.4rem; padding: 16px 26px; background: #ffd400; color: #000; border-radius: 14px; box-shadow: 0 4px 18px rgba(0,0,0,.5); }
 /* phones held sideways: one compact row of controls so the video/lyrics get the height */
 @media (orientation: landscape) and (max-height: 500px) {
   .stage-top { padding: 4px 8px; }
