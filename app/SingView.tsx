@@ -22,21 +22,25 @@ const hostOf = (u: string) => {
   }
 };
 
-type Prefs = { zoom: number; invert: boolean };
+type Prefs = { zoom: number; invert: boolean; videoZoom: number };
 
 function loadPrefs(): Prefs {
   try {
     const p = JSON.parse(localStorage.getItem(PREF_KEY) ?? "{}");
-    return { zoom: typeof p.zoom === "number" ? p.zoom : 100, invert: Boolean(p.invert) };
+    return {
+      zoom: typeof p.zoom === "number" ? p.zoom : 100,
+      invert: Boolean(p.invert),
+      videoZoom: typeof p.videoZoom === "number" ? p.videoZoom : 100,
+    };
   } catch {
-    return { zoom: 100, invert: false };
+    return { zoom: 100, invert: false, videoZoom: 100 };
   }
 }
 
 export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (remaining: Song[]) => void }) {
   const [index, setIndex] = useState(0);
   const [page, setPage] = useState(0);
-  const [prefs, setPrefs] = useState<Prefs>({ zoom: 100, invert: false });
+  const [prefs, setPrefs] = useState<Prefs>({ zoom: 100, invert: false, videoZoom: 100 });
   const [voted, setVoted] = useState<Record<string, "like" | "dislike">>({});
   const [broken, setBroken] = useState(false);
   const [hideUi, setHideUi] = useState(false);
@@ -118,6 +122,14 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
     if (page > 0) setPage(page - 1);
   };
 
+  // Video zoom enlarges the player around its lower part, where karaoke lyrics usually run.
+  const zoomBy = (dir: 1 | -1) =>
+    setPrefs((p) =>
+      videoMode
+        ? { ...p, videoZoom: Math.min(250, Math.max(100, p.videoZoom + dir * 25)) }
+        : { ...p, zoom: Math.min(300, Math.max(60, p.zoom + dir * 20)) },
+    );
+
   const vote = (type: "like" | "dislike") => {
     if (!song || voted[song.id]) return;
     setVoted({ ...voted, [song.id]: type });
@@ -191,6 +203,7 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
               <button className="btn" onClick={nextSong}>ข้ามไปเพลงต่อไป ▶</button>
             </div>
           ) : (
+            <div className="video-box" style={{ transform: `scale(${prefs.videoZoom / 100})` }}>
             <YouTubePlayer
               videoId={youtubeId(song.youtube)!}
               onEnded={nextSong}
@@ -199,6 +212,7 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
                 sendLog({ type: "dislike", songId: song.id, songTitle: song.title, query: "video_error" });
               }}
             />
+            </div>
           )
         ) : textMode ? (
           <div className="lyrics-text" style={{ fontSize: `${(2 * prefs.zoom) / 100}rem` }}>
@@ -249,10 +263,10 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
           <span className="ico">▶</span>
           {(textMode || (mode === "image" && page + 1 < total)) ? "ถัดไป" : upNext ? "เพลงต่อไป" : "จบ"}
         </button>
-        <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.max(60, prefs.zoom - 20) })} disabled={videoMode || mode === "link"}>
+        <button className="btn" onClick={() => zoomBy(-1)} disabled={mode === "link" || (videoMode && prefs.videoZoom <= 100)}>
           <span className="ico">A−</span>เล็กลง
         </button>
-        <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.min(300, prefs.zoom + 20) })} disabled={videoMode || mode === "link"}>
+        <button className="btn" onClick={() => zoomBy(1)} disabled={mode === "link" || (videoMode && prefs.videoZoom >= 250)}>
           <span className="ico">A+</span>ใหญ่ขึ้น
         </button>
         <button className="btn" onClick={() => setPrefs({ ...prefs, invert: !prefs.invert })} disabled={mode !== "image"}>
