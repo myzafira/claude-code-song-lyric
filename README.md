@@ -31,13 +31,22 @@ Web app สำหรับค้นหาเนื้อเพลง ต่อ�
 - **Readability** 1-5: ความอ่านง่าย ใช้จัดอันดับผลค้นหา
 - **Plays / Likes / Dislikes**: แอปนับให้อัตโนมัติ เพลงที่ Dislikes สูงคือเพลงที่ควรหาภาพใหม่
 
+## หน้าผู้ดูแล (/admin)
+เข้าที่ `/admin` ด้วยชื่อผู้ใช้และรหัสผ่านที่ตั้งไว้ใน Vercel (ไม่มีรหัสผ่านอยู่ในโค้ด) อยู่ในระบบได้ 12 ชั่วโมง
+- **สถิติ**: จำนวนการค้นหา/เปิดร้อง/ชอบ/ไม่ชอบ, เพลงที่คนหาแต่ไม่เจอหรือขอให้เพิ่ม, เพลงยอดนิยม, เพลงที่ควรตรวจ
+- **จัดการเพลง**: เพิ่ม/แก้ไขเพลงใน Notion ได้จากหน้าเว็บ การติ๊ก “ได้รับอนุญาต” ต้องกรอกรายละเอียดการอนุญาตเสมอ
+- **แบนเนอร์**: แก้ลิงก์ไป web app อื่นๆ ที่แสดงในหน้าหลัก
+ถ้ากรอกรหัสผิด 5 ครั้ง ต้องรอ 10 นาที
+
 ## ตั้งค่าบน Vercel
 1. สร้าง Notion integration ที่ https://www.notion.so/profile/integrations แล้วคัดลอก token
-2. ในฐานข้อมูลทั้งสองอันบน Notion กด `•••` → Connections → เพิ่ม integration นั้น
+2. ในฐานข้อมูลทั้งสามอันบน Notion (Lyric Images, Usage Log, Banners) กด `•••` → Connections → เพิ่ม integration นั้น
 3. ใน Vercel → Project → Settings → Environment Variables ใส่ค่าตาม `.env.example`
    - `NOTION_TOKEN`
    - `NOTION_SONGS_DB`
    - `NOTION_LOG_DB`
+   - `NOTION_BANNER_DB` (แบนเนอร์ลิงก์ไป web app อื่น ถ้าไม่ใส่จะแสดงแบนเนอร์ Palmiste ค่าเริ่มต้น)
+   - `ADMIN_USER`, `ADMIN_PASSWORD` (อย่างน้อย 12 ตัวอักษร), `ADMIN_SECRET` สำหรับหน้าผู้ดูแล
 4. Deploy ใหม่
 
 ถ้ายังไม่ใส่ `NOTION_TOKEN` แอปจะแสดงเพลงตัวอย่าง เพื่อให้ลองใช้งานได้

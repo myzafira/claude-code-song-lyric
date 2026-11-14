@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { singable, type Song } from "@/lib/types.ts";
 import SingView from "./SingView";
+import Banners from "./Banners";
 import { sendLog } from "@/lib/client-log.ts";
 
 const QUEUE_KEY = "esl.queue.v1";
@@ -115,6 +116,7 @@ export default function Home() {
       <h1 className="brand">
         🎤 ร้องเพลง<span>กัน</span>
       </h1>
+      <Banners />
 
       <form className="search" onSubmit={(e) => { e.preventDefault(); (document.activeElement as HTMLElement)?.blur(); }} role="search">
         <input

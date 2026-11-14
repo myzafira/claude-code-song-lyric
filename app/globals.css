@@ -17,7 +17,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 button { font: inherit; cursor: pointer; }
-button:focus-visible, input:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 4px solid var(--accent); outline-offset: 2px; }
 
 .wrap { max-width: 760px; margin: 0 auto; padding: 16px 16px 140px; }
 .brand { font-size: 1.8rem; font-weight: 700; margin: 8px 0 16px; }
@@ -110,3 +110,52 @@ a.btn { display: inline-block; text-decoration: none; }
   .stage-bar .btn { min-height: 52px; font-size: 0.8rem; padding: 2px; }
   .stage-bar .btn .ico { font-size: 1.2rem; }
 }
+
+/* ---------- admin ---------- */
+.admin { padding-bottom: 60px; }
+.admin-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.admin-head .btn { text-decoration: none; display: inline-flex; align-items: center; }
+.admin h2 { font-size: 1.3rem; margin: 26px 0 6px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 14px; }
+.btn.small { min-height: 48px; padding: 8px 14px; font-size: 1.05rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.form { display: flex; flex-direction: column; gap: 14px; }
+.form h2 { margin: 0; }
+.form label { display: flex; flex-direction: column; gap: 6px; font-weight: 700; flex: 1; min-width: 140px; }
+.form small { color: var(--muted); font-weight: 400; font-size: 0.9rem; }
+.form input, .form select, .form textarea {
+  font: inherit; font-size: 1.15rem; padding: 12px 14px; border-radius: 12px;
+  border: 2px solid #555; background: #111; color: var(--text); width: 100%;
+}
+.form textarea { resize: vertical; line-height: 1.5; }
+.form .check { flex-direction: row; align-items: center; gap: 12px; }
+.form .check input { width: 28px; height: 28px; flex: none; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
+.row .btn { text-decoration: none; display: inline-flex; align-items: center; }
+.notice { background: #2a2410; border: 1px solid #6b5a1c; border-radius: 12px; padding: 12px 14px; font-size: 1rem; }
+.err { color: var(--stop); font-weight: 700; margin: 0; }
+.hint { color: var(--muted); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; }
+.tile b { font-size: 1.8rem; color: var(--accent); }
+.tile span { color: var(--muted); font-size: 0.95rem; }
+.rows { margin: 0; padding: 8px 16px 8px 40px; }
+.rows li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.rows li:last-child { border-bottom: 0; }
+.rows li span { overflow-wrap: anywhere; }
+.rows li b { float: right; color: var(--accent); margin-left: 10px; }
+
+/* ---------- banners to our other web apps ---------- */
+.banners { display: flex; gap: 10px; overflow-x: auto; margin: -4px 0 12px; scrollbar-width: none; }
+.banner {
+  flex: 1 0 min(100%, 300px); display: flex; align-items: center; gap: 12px; min-height: 64px; max-height: 84px;
+  padding: 8px 14px; border-radius: 14px; text-decoration: none; color: var(--text);
+  background: linear-gradient(90deg, #1d1a2e, #24182a); border: 1px solid #4a3b63;
+}
+.banner img { width: 48px; height: 48px; object-fit: cover; border-radius: 10px; flex: none; }
+.banner-icon { font-size: 1.6rem; flex: none; }
+.banner-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.banner-text b { font-size: 1.1rem; }
+.banner-text small { color: var(--muted); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.banner-go { font-size: 1.3rem; color: var(--accent); }
+.banner-form { margin-bottom: 14px; }
