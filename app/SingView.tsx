@@ -1,10 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Song } from "@/lib/types.ts";
+import { availableModes, defaultMode, hasLyricsText, youtubeId, type Song, type ViewMode } from "@/lib/types.ts";
+import YouTubePlayer from "./YouTubePlayer";
 import { sendLog } from "@/lib/client-log.ts";
 
 const PREF_KEY = "esl.view.v1";
+
+const MODE_LABEL: Record<ViewMode, string> = {
+  video: "▶ คลิป",
+  image: "🖼 ภาพ",
+  text: "Aa ตัวหนังสือ",
+  link: "🔗 ลิงก์",
+};
+
+const hostOf = (u: string) => {
+  try {
+    return new URL(u).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+};
 
 type Prefs = { zoom: number; invert: boolean };
 
@@ -28,7 +44,12 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
   const scroller = useRef<HTMLDivElement>(null);
 
   const song = queue[index];
-  const total = song?.images.length ?? 0;
+  const [mode, setMode] = useState<ViewMode>(song ? defaultMode(song) : "video");
+  const [videoError, setVideoError] = useState(false);
+  const textMode = mode === "text";
+  const videoMode = mode === "video";
+  const modes = song ? availableModes(song) : [];
+  const total = mode === "image" ? (song?.images.length ?? 0) : 1;
 
   useEffect(() => setPrefs(loadPrefs()), []);
   useEffect(() => {
@@ -54,13 +75,16 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
   }, []);
 
   useEffect(() => {
-    if (song) sendLog({ type: "play", songId: song.id, songTitle: song.title });
+    if (!song) return;
+    setMode(defaultMode(song));
+    setVideoError(false);
+    sendLog({ type: "play", songId: song.id, songTitle: song.title });
   }, [song]);
 
   useEffect(() => {
     setBroken(false);
     scroller.current?.scrollTo({ top: 0 });
-  }, [index, page]);
+  }, [index, page, mode]);
 
   useEffect(() => {
     if (!toast) return;
@@ -74,14 +98,31 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
     setIndex(index + 1);
     setPage(0);
   };
-  const nextPage = () => (page + 1 < total ? setPage(page + 1) : nextSong());
-  const prevPage = () => page > 0 && setPage(page - 1);
+  // In text mode one "page" is one screenful of the scrolling lyrics.
+  const scrollBy = (dir: 1 | -1) => {
+    const el = scroller.current;
+    if (!el) return false;
+    const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    if (dir === 1 && atEnd) return false;
+    if (dir === -1 && el.scrollTop <= 0) return false;
+    el.scrollBy({ top: dir * el.clientHeight * 0.85, behavior: "smooth" });
+    return true;
+  };
+  const nextPage = () => {
+    if (videoMode || mode === "link") return nextSong();
+    if (textMode) return scrollBy(1) || nextSong();
+    return page + 1 < total ? setPage(page + 1) : nextSong();
+  };
+  const prevPage = () => {
+    if (textMode) return scrollBy(-1);
+    if (page > 0) setPage(page - 1);
+  };
 
   const vote = (type: "like" | "dislike") => {
     if (!song || voted[song.id]) return;
     setVoted({ ...voted, [song.id]: type });
     sendLog({ type, songId: song.id, songTitle: song.title });
-    setToast(type === "like" ? "ขอบคุณ! 👍" : "ขอบคุณ จะหาภาพที่อ่านง่ายกว่านี้");
+    setToast(type === "like" ? "ขอบคุณ! 👍" : "ขอบคุณ จะหาแบบที่อ่านง่ายกว่านี้");
   };
 
   useEffect(() => {
@@ -108,14 +149,76 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
           {total > 1 && ` · หน้า ${page + 1}/${total}`}
           {upNext ? ` · ต่อไป: ${upNext.title}` : " · เพลงสุดท้าย"}
         </div>
+        {modes.length > 1 && (
+          <button
+            className="btn ghost"
+            style={{ minHeight: 48, padding: "6px 12px", fontSize: "1rem" }}
+            onClick={() => {
+              setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
+              setPage(0);
+            }}
+          >
+            {MODE_LABEL[modes[(modes.indexOf(mode) + 1) % modes.length]]}
+          </button>
+        )}
       </div>
 
       <div
         ref={scroller}
-        className={`stage-img${prefs.invert ? " invert" : ""}`}
-        onDoubleClick={() => setHideUi(!hideUi)}
+        className={`stage-img${prefs.invert ? " invert" : ""}${textMode ? " text" : ""}${videoMode ? " video" : ""}`}
+        onDoubleClick={() => !videoMode && setHideUi(!hideUi)}
       >
-        {broken ? (
+        {mode === "link" ? (
+          <div className="stage-msg">
+            <p style={{ color: "#fff", fontSize: "1.6rem" }}>{song.title}</p>
+            <p>
+              <a className="btn accent big-link" href={song.lyricsLink} target="_blank" rel="noopener noreferrer">
+                📖 เปิดเนื้อเพลง
+              </a>
+            </p>
+            <p>เปิดที่เว็บ {hostOf(song.lyricsLink)} (แหล่งที่ได้รับอนุญาต)</p>
+            <p>ร้องจบแล้วกลับมาที่หน้านี้ แล้วกด ▶ เพลงต่อไป</p>
+          </div>
+        ) : videoMode ? (
+          videoError ? (
+            <div className="stage-msg">
+              <p>เปิดคลิปในแอปไม่ได้ (เจ้าของปิดการฝังคลิป หรืออินเทอร์เน็ตมีปัญหา)</p>
+              <p>
+                <a className="btn accent" href={song.youtube} target="_blank" rel="noopener noreferrer">
+                  เปิดใน YouTube
+                </a>
+              </p>
+              <button className="btn" onClick={nextSong}>ข้ามไปเพลงต่อไป ▶</button>
+            </div>
+          ) : (
+            <YouTubePlayer
+              videoId={youtubeId(song.youtube)!}
+              onEnded={nextSong}
+              onError={() => {
+                setVideoError(true);
+                sendLog({ type: "dislike", songId: song.id, songTitle: song.title, query: "video_error" });
+              }}
+            />
+          )
+        ) : textMode ? (
+          <div className="lyrics-text" style={{ fontSize: `${(2 * prefs.zoom) / 100}rem` }}>
+            <div className="lyrics-title">{song.title}</div>
+            {song.lyrics
+              .trim()
+              .split(/\n\s*\n/)
+              .map((stanza, i) => (
+                <p key={i}>
+                  {stanza.split("\n").map((line, j) => (
+                    <span key={j}>
+                      {line}
+                      <br />
+                    </span>
+                  ))}
+                </p>
+              ))}
+            <div className="lyrics-end">— จบเพลง —</div>
+          </div>
+        ) : broken ? (
           <div className="stage-msg">
             <p>ภาพนี้โหลดไม่ได้</p>
             <button className="btn accent" onClick={nextPage}>ข้ามไป ▶</button>
@@ -129,7 +232,9 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
             referrerPolicy="no-referrer"
             style={{ width: `${prefs.zoom}%` }}
             onError={() => {
-              setBroken(true);
+              if (hasLyricsText(song)) setMode("text");
+              else if (youtubeId(song.youtube)) setMode("video");
+              else setBroken(true);
               sendLog({ type: "dislike", songId: song.id, songTitle: song.title, query: "image_error" });
             }}
           />
@@ -137,20 +242,20 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
       </div>
 
       <div className="stage-bar">
-        <button className="btn" onClick={prevPage} disabled={page === 0}>
-          <span className="ico">◀</span>หน้าก่อน
+        <button className="btn" onClick={prevPage} disabled={videoMode || mode === "link" || (!textMode && page === 0)}>
+          <span className="ico">◀</span>ย้อนกลับ
         </button>
         <button className="btn accent" onClick={nextPage}>
           <span className="ico">▶</span>
-          {page + 1 < total ? "หน้าถัดไป" : upNext ? "เพลงต่อไป" : "จบ"}
+          {(textMode || (mode === "image" && page + 1 < total)) ? "ถัดไป" : upNext ? "เพลงต่อไป" : "จบ"}
         </button>
-        <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.max(60, prefs.zoom - 20) })}>
+        <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.max(60, prefs.zoom - 20) })} disabled={videoMode || mode === "link"}>
           <span className="ico">A−</span>เล็กลง
         </button>
-        <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.min(300, prefs.zoom + 20) })}>
+        <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.min(300, prefs.zoom + 20) })} disabled={videoMode || mode === "link"}>
           <span className="ico">A+</span>ใหญ่ขึ้น
         </button>
-        <button className="btn" onClick={() => setPrefs({ ...prefs, invert: !prefs.invert })}>
+        <button className="btn" onClick={() => setPrefs({ ...prefs, invert: !prefs.invert })} disabled={mode !== "image"}>
           <span className="ico">🌙</span>{prefs.invert ? "สีปกติ" : "พื้นดำ"}
         </button>
         <button className="btn" onClick={nextSong} disabled={!upNext}>

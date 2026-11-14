@@ -33,6 +33,7 @@ const text = (p: any): string =>
 const num = (p: any): number | null => (typeof p?.number === "number" ? p.number : null);
 const sel = (p: any): string => p?.select?.name ?? "";
 const url = (p: any): string => p?.url ?? "";
+const check = (p: any): boolean => p?.checkbox === true;
 
 export function parseImageUrls(raw: string): string[] {
   return raw
@@ -43,6 +44,8 @@ export function parseImageUrls(raw: string): string[] {
 
 function toSong(page: any): Song {
   const p = page.properties ?? {};
+  // Lyrics are only sent to the browser when the rights holder has allowed it.
+  const licensed = check(p["Licensed"]);
   return {
     id: page.id,
     title: text(p["Song"]),
@@ -51,7 +54,7 @@ function toSong(page: any): Song {
     yearBE: num(p["Year BE"]),
     language: sel(p["Language"]),
     genre: sel(p["Genre"]),
-    images: parseImageUrls(text(p["Image URLs"])),
+    images: licensed ? parseImageUrls(text(p["Image URLs"])) : [],
     source: url(p["Source"]),
     readability: num(p["Readability"]),
     status: sel(p["Status"]),
@@ -59,6 +62,10 @@ function toSong(page: any): Song {
     likes: num(p["Likes"]) ?? 0,
     dislikes: num(p["Dislikes"]) ?? 0,
     youtube: url(p["YouTube"]),
+    youtubeChannel: text(p["YouTube Channel"]),
+    lyricsLink: url(p["Lyrics Link"]),
+    lyrics: licensed ? text(p["Lyrics"]) : "",
+    licensed,
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -140,7 +147,7 @@ export async function writeLog(ev: LogEvent): Promise<void> {
 const demo = (id: string, title: string, artist: string, yearBE: number, language: string, genre: string): Song => ({
   id, title, artist, aliases: "", yearBE, language, genre,
   images: [`/demo-lyric.svg?song=${encodeURIComponent(title)}`],
-  source: "", readability: 5, status: "ใช้ได้", plays: 0, likes: 0, dislikes: 0, youtube: "",
+  source: "", readability: 5, status: "ใช้ได้", plays: 0, likes: 0, dislikes: 0, youtube: "", youtubeChannel: "", lyricsLink: "", lyrics: "", licensed: true,
 });
 
 const DEMO_SONGS: Song[] = [
@@ -150,4 +157,10 @@ const DEMO_SONGS: Song[] = [
   demo("demo-4", "Sample English Song", "Sample Artist", 2520, "อังกฤษ", "สากล"),
   demo("demo-5", "ตัวอย่างเพลงลูกกรุง", "ศิลปินตัวอย่าง", 2516, "ไทย", "ลูกกรุง"),
   demo("demo-6", "Another Sample Song", "Sample Band", 2535, "อังกฤษ", "สากล"),
+  {
+    ...demo("demo-7", "ตัวอย่างเพลงแบบตัวหนังสือ", "ศิลปินตัวอย่าง", 2538, "ไทย", "สตริง"),
+    images: [],
+    lyrics:
+      "นี่คือท่อนแรก ตัวหนังสือใหญ่\nอ่านง่ายในที่มืด\n\nนี่คือท่อนที่สอง\nเว้นบรรทัดว่างเพื่อแบ่งท่อน\n\n(ซ้ำ *)\nร้องตามได้ทุกคน",
+  },
 ];
