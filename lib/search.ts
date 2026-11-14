@@ -1,4 +1,4 @@
-import type { Song } from "./types.ts";
+import { singable, type Song } from "./types.ts";
 
 // Thai tone marks and some vowel signs are often typed inconsistently,
 // so they are dropped for matching. Spaces and punctuation are ignored too.
@@ -46,7 +46,7 @@ export function scoreSong(query: string, song: Song): number {
     (song.readability ?? 3) * 2 +
     Math.min(song.likes - song.dislikes, 20) * 0.3 +
     Math.min(song.plays, 50) * 0.05 +
-    (song.images.length > 0 ? 5 : -30);
+    (singable(song) ? 5 : -30);
   return best + quality;
 }
 
@@ -61,7 +61,7 @@ export function searchSongs(query: string, songs: Song[], limit = 20): Song[] {
 
 export function popularSongs(songs: Song[], limit = 12): Song[] {
   return songs
-    .filter((s) => s.images.length > 0)
+    .filter(singable)
     .sort(
       (a, b) =>
         b.plays + b.likes * 3 - b.dislikes * 3 - (a.plays + a.likes * 3 - a.dislikes * 3),

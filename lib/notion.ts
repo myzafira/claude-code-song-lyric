@@ -59,6 +59,7 @@ function toSong(page: any): Song {
     likes: num(p["Likes"]) ?? 0,
     dislikes: num(p["Dislikes"]) ?? 0,
     youtube: url(p["YouTube"]),
+    lyrics: text(p["Lyrics"]),
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -140,7 +141,7 @@ export async function writeLog(ev: LogEvent): Promise<void> {
 const demo = (id: string, title: string, artist: string, yearBE: number, language: string, genre: string): Song => ({
   id, title, artist, aliases: "", yearBE, language, genre,
   images: [`/demo-lyric.svg?song=${encodeURIComponent(title)}`],
-  source: "", readability: 5, status: "ใช้ได้", plays: 0, likes: 0, dislikes: 0, youtube: "",
+  source: "", readability: 5, status: "ใช้ได้", plays: 0, likes: 0, dislikes: 0, youtube: "", lyrics: "",
 });
 
 const DEMO_SONGS: Song[] = [
@@ -150,4 +151,10 @@ const DEMO_SONGS: Song[] = [
   demo("demo-4", "Sample English Song", "Sample Artist", 2520, "อังกฤษ", "สากล"),
   demo("demo-5", "ตัวอย่างเพลงลูกกรุง", "ศิลปินตัวอย่าง", 2516, "ไทย", "ลูกกรุง"),
   demo("demo-6", "Another Sample Song", "Sample Band", 2535, "อังกฤษ", "สากล"),
+  {
+    ...demo("demo-7", "ตัวอย่างเพลงแบบตัวหนังสือ", "ศิลปินตัวอย่าง", 2538, "ไทย", "สตริง"),
+    images: [],
+    lyrics:
+      "นี่คือท่อนแรก ตัวหนังสือใหญ่\nอ่านง่ายในที่มืด\n\nนี่คือท่อนที่สอง\nเว้นบรรทัดว่างเพื่อแบ่งท่อน\n\n(ซ้ำ *)\nร้องตามได้ทุกคน",
+  },
 ];

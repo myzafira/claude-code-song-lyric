@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Song } from "@/lib/types.ts";
+import { hasLyricsText, preferImages, type Song } from "@/lib/types.ts";
 import { sendLog } from "@/lib/client-log.ts";
 
 const PREF_KEY = "esl.view.v1";
@@ -28,7 +28,10 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
   const scroller = useRef<HTMLDivElement>(null);
 
   const song = queue[index];
-  const total = song?.images.length ?? 0;
+  const [mode, setMode] = useState<"image" | "text">(song && preferImages(song) ? "image" : "text");
+  const textMode = mode === "text";
+  const canToggle = Boolean(song && song.images.length > 0 && hasLyricsText(song));
+  const total = textMode ? 1 : (song?.images.length ?? 0);
 
   useEffect(() => setPrefs(loadPrefs()), []);
   useEffect(() => {
@@ -54,13 +57,15 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
   }, []);
 
   useEffect(() => {
-    if (song) sendLog({ type: "play", songId: song.id, songTitle: song.title });
+    if (!song) return;
+    setMode(preferImages(song) ? "image" : "text");
+    sendLog({ type: "play", songId: song.id, songTitle: song.title });
   }, [song]);
 
   useEffect(() => {
     setBroken(false);
     scroller.current?.scrollTo({ top: 0 });
-  }, [index, page]);
+  }, [index, page, mode]);
 
   useEffect(() => {
     if (!toast) return;
@@ -74,8 +79,24 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
     setIndex(index + 1);
     setPage(0);
   };
-  const nextPage = () => (page + 1 < total ? setPage(page + 1) : nextSong());
-  const prevPage = () => page > 0 && setPage(page - 1);
+  // In text mode one "page" is one screenful of the scrolling lyrics.
+  const scrollBy = (dir: 1 | -1) => {
+    const el = scroller.current;
+    if (!el) return false;
+    const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+    if (dir === 1 && atEnd) return false;
+    if (dir === -1 && el.scrollTop <= 0) return false;
+    el.scrollBy({ top: dir * el.clientHeight * 0.85, behavior: "smooth" });
+    return true;
+  };
+  const nextPage = () => {
+    if (textMode) return scrollBy(1) || nextSong();
+    return page + 1 < total ? setPage(page + 1) : nextSong();
+  };
+  const prevPage = () => {
+    if (textMode) return scrollBy(-1);
+    if (page > 0) setPage(page - 1);
+  };
 
   const vote = (type: "like" | "dislike") => {
     if (!song || voted[song.id]) return;
@@ -108,14 +129,44 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
           {total > 1 && ` · หน้า ${page + 1}/${total}`}
           {upNext ? ` · ต่อไป: ${upNext.title}` : " · เพลงสุดท้าย"}
         </div>
+        {canToggle && (
+          <button
+            className="btn ghost"
+            style={{ minHeight: 48, padding: "6px 12px", fontSize: "1rem" }}
+            onClick={() => {
+              setMode(textMode ? "image" : "text");
+              setPage(0);
+            }}
+          >
+            {textMode ? "🖼 ดูภาพ" : "Aa ตัวหนังสือ"}
+          </button>
+        )}
       </div>
 
       <div
         ref={scroller}
-        className={`stage-img${prefs.invert ? " invert" : ""}`}
+        className={`stage-img${prefs.invert ? " invert" : ""}${textMode ? " text" : ""}`}
         onDoubleClick={() => setHideUi(!hideUi)}
       >
-        {broken ? (
+        {textMode ? (
+          <div className="lyrics-text" style={{ fontSize: `${(2 * prefs.zoom) / 100}rem` }}>
+            <div className="lyrics-title">{song.title}</div>
+            {song.lyrics
+              .trim()
+              .split(/\n\s*\n/)
+              .map((stanza, i) => (
+                <p key={i}>
+                  {stanza.split("\n").map((line, j) => (
+                    <span key={j}>
+                      {line}
+                      <br />
+                    </span>
+                  ))}
+                </p>
+              ))}
+            <div className="lyrics-end">— จบเพลง —</div>
+          </div>
+        ) : broken ? (
           <div className="stage-msg">
             <p>ภาพนี้โหลดไม่ได้</p>
             <button className="btn accent" onClick={nextPage}>ข้ามไป ▶</button>
@@ -129,7 +180,8 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
             referrerPolicy="no-referrer"
             style={{ width: `${prefs.zoom}%` }}
             onError={() => {
-              setBroken(true);
+              if (hasLyricsText(song)) setMode("text");
+              else setBroken(true);
               sendLog({ type: "dislike", songId: song.id, songTitle: song.title, query: "image_error" });
             }}
           />
@@ -137,12 +189,12 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
       </div>
 
       <div className="stage-bar">
-        <button className="btn" onClick={prevPage} disabled={page === 0}>
-          <span className="ico">◀</span>หน้าก่อน
+        <button className="btn" onClick={prevPage} disabled={!textMode && page === 0}>
+          <span className="ico">◀</span>ย้อนกลับ
         </button>
         <button className="btn accent" onClick={nextPage}>
           <span className="ico">▶</span>
-          {page + 1 < total ? "หน้าถัดไป" : upNext ? "เพลงต่อไป" : "จบ"}
+          {textMode || page + 1 < total ? "ถัดไป" : upNext ? "เพลงต่อไป" : "จบ"}
         </button>
         <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.max(60, prefs.zoom - 20) })}>
           <span className="ico">A−</span>เล็กลง
@@ -150,7 +202,7 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
         <button className="btn" onClick={() => setPrefs({ ...prefs, zoom: Math.min(300, prefs.zoom + 20) })}>
           <span className="ico">A+</span>ใหญ่ขึ้น
         </button>
-        <button className="btn" onClick={() => setPrefs({ ...prefs, invert: !prefs.invert })}>
+        <button className="btn" onClick={() => setPrefs({ ...prefs, invert: !prefs.invert })} disabled={textMode}>
           <span className="ico">🌙</span>{prefs.invert ? "สีปกติ" : "พื้นดำ"}
         </button>
         <button className="btn" onClick={nextSong} disabled={!upNext}>

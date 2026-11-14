@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Song } from "@/lib/types.ts";
+import { singable, type Song } from "@/lib/types.ts";
 import SingView from "./SingView";
 import { sendLog } from "@/lib/client-log.ts";
 
@@ -159,7 +159,7 @@ export default function Home() {
                 ✓ ในคิว
               </button>
             ) : (
-              <button className="btn accent" onClick={() => add(s)} disabled={s.images.length === 0}>
+              <button className="btn accent" onClick={() => add(s)} disabled={!singable(s)}>
                 ➕ คิว
               </button>
             )}

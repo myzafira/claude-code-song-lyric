@@ -85,3 +85,12 @@ button:focus-visible, input:focus-visible { outline: 4px solid var(--accent); ou
 .queue-card { flex-wrap: wrap; }
 .queue-card .info { flex: 1 1 200px; }
 .queue-card .controls { display: flex; gap: 8px; margin-left: auto; }
+
+.stage-img.text { display: block; }
+.lyrics-text {
+  max-width: 1100px; margin: 0 auto; padding: 24px 20px 40vh; color: #fff;
+  font-weight: 700; line-height: 1.55; text-align: center; overflow-wrap: anywhere;
+}
+.lyrics-text p { margin: 0 0 1.1em; }
+.lyrics-title { color: var(--accent); font-size: 0.8em; margin-bottom: 1em; }
+.lyrics-end { color: #777; font-size: 0.6em; }
