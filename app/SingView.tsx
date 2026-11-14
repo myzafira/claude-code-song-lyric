@@ -37,7 +37,15 @@ function loadPrefs(): Prefs {
   }
 }
 
-export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (remaining: Song[]) => void }) {
+export default function SingView({
+  queue,
+  onDone,
+  onMinimize,
+}: {
+  queue: Song[];
+  onDone: (remaining: Song[]) => void;
+  onMinimize?: (mini: boolean) => void;
+}) {
   const [index, setIndex] = useState(0);
   const [page, setPage] = useState(0);
   const [prefs, setPrefs] = useState<Prefs>({ zoom: 100, invert: false, videoZoom: 100 });
@@ -45,6 +53,9 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
   const [broken, setBroken] = useState(false);
   const [hideUi, setHideUi] = useState(false);
   const [toast, setToast] = useState("");
+  const [mini, setMini] = useState(false);
+  const [full, setFull] = useState(false);
+  const [canFull, setCanFull] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
 
   const song = queue[index];
@@ -70,9 +81,13 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
     acquire();
     const onVis = () => document.visibilityState === "visible" && acquire();
     document.addEventListener("visibilitychange", onVis);
+    setCanFull(Boolean(document.documentElement.requestFullscreen));
+    const onFs = () => setFull(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", onFs);
     document.documentElement.requestFullscreen?.().catch(() => {});
     return () => {
       document.removeEventListener("visibilitychange", onVis);
+      document.removeEventListener("fullscreenchange", onFs);
       lock?.release().catch(() => {});
       if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     };
@@ -97,6 +112,24 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
   }, [toast]);
 
   const finish = () => onDone(queue.slice(index + 1));
+
+  // Window-style controls: minimise shrinks the stage to a small floating window (the song keeps playing),
+  // maximise restores it and toggles full screen.
+  const minimize = () => {
+    setMini(true);
+    onMinimize?.(true);
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  };
+  const maximize = () => {
+    if (mini) {
+      setMini(false);
+      onMinimize?.(false);
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      return;
+    }
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  };
   const nextSong = () => {
     if (index + 1 >= queue.length) return finish();
     setIndex(index + 1);
@@ -141,7 +174,7 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight" || e.key === "PageDown") nextPage();
       else if (e.key === "ArrowLeft" || e.key === "PageUp") prevPage();
-      else if (e.key === "Escape") finish();
+      else if (e.key === "Escape" && !mini && !document.fullscreenElement) finish();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -151,11 +184,26 @@ export default function SingView({ queue, onDone }: { queue: Song[]; onDone: (re
   const upNext = queue[index + 1];
 
   return (
-    <div className={`stage${hideUi ? " hide-ui" : ""}`}>
+    <div className={`stage${hideUi && !mini ? " hide-ui" : ""}${mini ? " mini" : ""}`}>
       <div className="stage-top">
-        <button className="btn ghost" onClick={finish} aria-label="กลับไปหน้าคิว" style={{ minHeight: 48, padding: "6px 14px" }}>
-          ✕
-        </button>
+        <div className="win-btns">
+          <button className="btn ghost win" onClick={finish} aria-label="ปิด กลับไปหน้าคิว" title="ปิด">
+            ✕
+          </button>
+          <button className="btn ghost win" onClick={minimize} disabled={mini} aria-label="ย่อหน้าต่างลง" title="ย่อลง">
+            –
+          </button>
+          {(mini || canFull) && (
+            <button
+              className="btn ghost win"
+              onClick={maximize}
+              aria-label={mini ? "ขยายกลับเต็มหน้า" : full ? "ออกจากเต็มจอ" : "ขยายเต็มจอ"}
+              title={mini ? "ขยาย" : full ? "ออกจากเต็มจอ" : "เต็มจอ"}
+            >
+              {full && !mini ? "❐" : "☐"}
+            </button>
+          )}
+        </div>
         <div className="now">
           <b>{song.title}</b> {song.artist && `· ${song.artist}`}
           {total > 1 && ` · หน้า ${page + 1}/${total}`}

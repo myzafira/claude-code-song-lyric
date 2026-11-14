@@ -18,6 +18,7 @@ export default function Home() {
   const [failed, setFailed] = useState(false);
   const [queue, setQueue] = useState<Song[]>([]);
   const [singing, setSinging] = useState(false);
+  const [mini, setMini] = useState(false);
   const [toast, setToast] = useState("");
   const [requested, setRequested] = useState("");
   const loaded = useRef(false);
@@ -97,22 +98,25 @@ export default function Home() {
     setToast("รับคำขอแล้ว จะหาเพลงนี้มาเพิ่มให้");
   };
 
-  if (singing && queue.length > 0) {
-    return (
-      <SingView
-        queue={queue}
-        onDone={(remaining) => {
-          setQueue(remaining);
-          setSinging(false);
-        }}
-      />
-    );
-  }
-
   const q = query.trim();
+  const showSing = singing && queue.length > 0;
 
+  // The sing view stays mounted while minimised so the song keeps playing in a small window.
   return (
-    <main className="wrap">
+    <>
+      {showSing && (
+        <SingView
+          queue={queue}
+          onMinimize={setMini}
+          onDone={(remaining) => {
+            setQueue(remaining);
+            setSinging(false);
+            setMini(false);
+          }}
+        />
+      )}
+      {(!showSing || mini) && (
+    <main className={`wrap${showSing ? " under-mini" : ""}`}>
       <h1 className="brand">
         🎤 ร้องเพลง<span>กัน</span>
       </h1>
@@ -193,7 +197,7 @@ export default function Home() {
 
       <div className="bottom">
         <div className="inner">
-          <button className="btn go" onClick={() => setSinging(true)} disabled={queue.length === 0}>
+          <button className="btn go" onClick={() => setSinging(true)} disabled={queue.length === 0 || showSing}>
             ▶ เริ่มร้อง{queue.length ? `: ${queue[0].title}` : ""}
           </button>
         </div>
@@ -201,5 +205,7 @@ export default function Home() {
 
       {toast && <div className="toast" role="status">{toast}</div>}
     </main>
+      )}
+    </>
   );
 }

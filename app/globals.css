@@ -81,6 +81,23 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   padding: 12px 20px; border-radius: 999px; font-weight: 700; z-index: 30; font-size: 1.1rem;
 }
 .hide-ui .stage-top, .hide-ui .stage-bar { display: none; }
+/* window-style buttons (close, minimise, maximise) at the top left */
+.win-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.win-btns .btn.win { min-height: 48px; min-width: 52px; padding: 6px 10px; font-size: 1.3rem; line-height: 1; }
+/* minimised: a small floating window in the bottom-right corner; the song keeps playing */
+.stage.mini {
+  inset: auto 12px calc(104px + env(safe-area-inset-bottom)) auto; width: min(380px, calc(100vw - 24px));
+  height: auto; border: 2px solid var(--line); border-radius: 14px; overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); z-index: 40;
+}
+.stage.mini .stage-bar { display: none; }
+.stage.mini .stage-top { padding: 4px 6px; gap: 6px; font-size: 0.85rem; }
+.stage.mini .stage-top .now b { font-size: 0.95rem; }
+.stage.mini .stage-top > .btn { display: none; }
+.stage.mini .win-btns .btn.win { min-height: 40px; min-width: 44px; font-size: 1.1rem; }
+.stage.mini .stage-img { flex: none; height: calc(min(380px, 100vw - 24px) * 9 / 16); }
+.stage.mini .lyrics-text { font-size: 1rem !important; padding-bottom: 24px; }
+.under-mini { padding-bottom: 420px; }
 
 .queue-card { flex-wrap: wrap; }
 .queue-card .info { flex: 1 1 200px; }
