@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { singable, type Song } from "@/lib/types.ts";
+import { LINK_TYPE_LABEL, singable, type LinkType, type Song } from "@/lib/types.ts";
 import SingView from "./SingView";
 import Banners from "./Banners";
 import { sendLog } from "@/lib/client-log.ts";
@@ -9,10 +9,41 @@ import { sendLog } from "@/lib/client-log.ts";
 const QUEUE_KEY = "esl.queue.v1";
 const MAX_QUEUE = 50;
 
-const meta = (s: Song) => [s.artist, s.yearBE ? `พ.ศ. ${s.yearBE}` : ""].filter(Boolean).join(" · ");
+const meta = (s: Song) =>
+  [s.artist, s.album ? `อัลบั้ม ${s.album}` : "", s.yearBE ? `พ.ศ. ${s.yearBE}` : ""].filter(Boolean).join(" · ");
+
+type By = "all" | "title" | "artist" | "album";
+const BY_OPTIONS: [By, string][] = [
+  ["all", "ทั้งหมด"],
+  ["title", "ชื่อเพลง"],
+  ["artist", "นักร้อง"],
+  ["album", "อัลบั้ม"],
+];
+const TYPE_OPTIONS: [LinkType | "all", string][] = [
+  ["all", "ทุกแบบ"],
+  ["karaoke", "🎼 คาราโอเกะ"],
+  ["vocal", "🎙️ มีเสียงร้อง"],
+];
+const PLACEHOLDER: Record<By, string> = {
+  all: "พิมพ์ชื่อเพลง นักร้อง หรืออัลบั้ม",
+  title: "พิมพ์ชื่อเพลง",
+  artist: "พิมพ์ชื่อนักร้อง หรือชื่อวง",
+  album: "พิมพ์ชื่ออัลบั้ม",
+};
+
+function TypeBadge({ s }: { s: Song }) {
+  if (!s.linkType) return null;
+  return (
+    <span className={`badge ${s.linkType}`} title={LINK_TYPE_LABEL[s.linkType]}>
+      {s.linkType === "karaoke" ? "🎼 คาราโอเกะ" : "🎙️ มีเสียงร้อง"}
+    </span>
+  );
+}
 
 export default function Home() {
   const [query, setQuery] = useState("");
+  const [by, setBy] = useState<By>("all");
+  const [type, setType] = useState<LinkType | "all">("all");
   const [results, setResults] = useState<Song[]>([]);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -52,7 +83,8 @@ export default function Home() {
     const t = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/songs?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
+        const params = new URLSearchParams({ q, by, type });
+        const res = await fetch(`/api/songs?${params}`, { signal: ctrl.signal });
         const data = await res.json();
         setResults(data.songs ?? []);
         setFailed(!res.ok);
@@ -70,7 +102,7 @@ export default function Home() {
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [query]);
+  }, [query, by, type]);
 
   const inQueue = useCallback((id: string) => queue.some((s) => s.id === id), [queue]);
 
@@ -126,7 +158,7 @@ export default function Home() {
         <input
           type="search"
           inputMode="search"
-          placeholder="พิมพ์ชื่อเพลง หรือชื่อนักร้อง"
+          placeholder={PLACEHOLDER[by]}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           aria-label="ค้นหาเพลง"
@@ -139,7 +171,26 @@ export default function Home() {
         )}
       </form>
 
-      <h2 className="section-title">{q ? (loading ? "กำลังค้นหา…" : `ผลการค้นหา "${q}"`) : "เพลงยอดนิยม"}</h2>
+      <div className="filters">
+        <div className="chips" role="group" aria-label="ค้นหาจาก">
+          <span className="chips-label">ค้นจาก</span>
+          {BY_OPTIONS.map(([v, label]) => (
+            <button key={v} type="button" className={`chip${by === v ? " on" : ""}`} aria-pressed={by === v} onClick={() => setBy(v)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="chips" role="group" aria-label="แบบคลิป">
+          <span className="chips-label">แบบคลิป</span>
+          {TYPE_OPTIONS.map(([v, label]) => (
+            <button key={v} type="button" className={`chip${type === v ? " on" : ""}`} aria-pressed={type === v} onClick={() => setType(v)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <h2 className="section-title">{q ? (loading ? "กำลังค้นหา…" : `ผลการค้นหา "${q}"${results.length ? ` (${results.length} เพลง)` : ""}`) : "เพลงยอดนิยม"}</h2>
       {failed && <div className="empty">โหลดรายการเพลงไม่ได้ ลองใหม่อีกครั้ง</div>}
       {!failed && !loading && results.length === 0 && q && (
         <div className="empty">
@@ -159,6 +210,7 @@ export default function Home() {
             <div className="info">
               <div className="title">{s.title}</div>
               <div className="meta">{meta(s)}</div>
+              <TypeBadge s={s} />
             </div>
             {inQueue(s.id) ? (
               <button className="btn" disabled>

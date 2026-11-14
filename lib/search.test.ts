@@ -6,7 +6,7 @@ import type { Song } from "./types.ts";
 const base: Song = {
   id: "", title: "", artist: "", aliases: "", yearBE: null, language: "ไทย",
   genre: "", images: ["x"], source: "", readability: 4, status: "ใช้ได้",
-  plays: 0, likes: 0, dislikes: 0, youtube: "", youtubeChannel: "", lyricsLink: "", lyrics: "", licensed: true,
+  plays: 0, likes: 0, dislikes: 0, youtube: "", youtubeChannel: "", lyricsLink: "", lyrics: "", licensed: true, album: "", linkType: "karaoke",
 };
 const songs: Song[] = [
   { ...base, id: "1", title: "ตังเก", artist: "คาราบาว" },
@@ -79,4 +79,32 @@ test("a licensed lyrics link alone makes a song singable, opened on the source s
   assert.equal(singable(s), true);
   assert.equal(defaultMode(s), "link");
   assert.equal(singable({ ...s, lyricsLink: "javascript:alert(1)" }), false);
+});
+
+const more: Song[] = [
+  { ...base, id: "k1", title: "เพลงหนึ่ง", artist: "นักร้องเอ", album: "อัลบั้มแรก", linkType: "karaoke" },
+  { ...base, id: "k2", title: "เพลงสอง", artist: "นักร้องเอ", linkType: "karaoke" },
+  { ...base, id: "v1", title: "นักร้องเอ รำลึก", artist: "วงบี", album: "รวมฮิต", linkType: "vocal" },
+];
+
+test("search by singer lists only that singer's songs", () => {
+  const ids = searchSongs("นักร้องเอ", more, { by: "artist" }).map((s) => s.id).sort();
+  assert.deepEqual(ids, ["k1", "k2"]);
+});
+
+test("search by album", () => {
+  assert.deepEqual(searchSongs("อัลบั้มแรก", more, { by: "album" }).map((s) => s.id), ["k1"]);
+  assert.equal(searchSongs("รวมฮิต", more)[0].id, "v1");
+});
+
+test("filter karaoke vs vocal", () => {
+  assert.deepEqual(searchSongs("นักร้องเอ", more, { type: "vocal" }).map((s) => s.id), ["v1"]);
+  assert.equal(searchSongs("นักร้องเอ", more, { type: "karaoke" }).length, 2);
+});
+
+test("link type is inferred from the channel unless set", async () => {
+  const { inferLinkType } = await import("./types.ts");
+  assert.equal(inferLinkType("", "GMM Karaoke (@gmmkaraoke)"), "karaoke");
+  assert.equal(inferLinkType("", "Whattheduck (@whattheduckmusic)"), "vocal");
+  assert.equal(inferLinkType("มีเสียงร้อง", "GMM Karaoke"), "vocal");
 });
