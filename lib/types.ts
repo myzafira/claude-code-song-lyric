@@ -2,6 +2,8 @@ export type Song = {
   id: string;
   title: string;
   artist: string;
+  /** Album name, filled in only when checked against an official source. */
+  album: string;
   aliases: string;
   yearBE: number | null;
   language: string;
@@ -20,7 +22,26 @@ export type Song = {
   lyrics: string;
   /** Rights holder has allowed us to show this song's lyrics (images/text). */
   licensed: boolean;
+  /** "karaoke" = music and on-screen lyrics, no lead vocal; "vocal" = the singer's voice is in the clip. */
+  linkType: LinkType;
 };
+
+export type LinkType = "karaoke" | "vocal";
+
+export const LINK_TYPE_LABEL: Record<LinkType, string> = {
+  karaoke: "คาราโอเกะ (ไม่มีเสียงร้อง)",
+  vocal: "มีเสียงร้อง",
+};
+
+/**
+ * Uses the value set in Notion when there is one. Otherwise karaoke channels and
+ * clips titled karaoke count as karaoke, and other official clips (MV, lyric videos) as vocal.
+ */
+export function inferLinkType(explicit: string, channel: string): LinkType {
+  if (explicit === "คาราโอเกะ" || explicit === "karaoke") return "karaoke";
+  if (explicit === "มีเสียงร้อง" || explicit === "vocal") return "vocal";
+  return /karaoke|คาราโอเกะ|instrumental/i.test(channel) ? "karaoke" : "vocal";
+}
 
 export type ViewMode = "video" | "image" | "text" | "link";
 

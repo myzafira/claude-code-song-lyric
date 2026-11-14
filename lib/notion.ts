@@ -1,4 +1,4 @@
-import type { LogEvent, Song } from "./types.ts";
+import { inferLinkType, type LogEvent, type Song } from "./types.ts";
 
 const API = "https://api.notion.com/v1";
 const VERSION = "2022-06-28";
@@ -50,6 +50,7 @@ function toSong(page: any): Song {
     id: page.id,
     title: text(p["Song"]),
     artist: text(p["Artist"]),
+    album: text(p["Album"]),
     aliases: text(p["Aliases"]),
     yearBE: num(p["Year BE"]),
     language: sel(p["Language"]),
@@ -66,6 +67,7 @@ function toSong(page: any): Song {
     lyricsLink: url(p["Lyrics Link"]),
     lyrics: licensed ? text(p["Lyrics"]) : "",
     licensed,
+    linkType: inferLinkType(sel(p["Link Type"]), text(p["YouTube Channel"])),
   };
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -145,7 +147,7 @@ export async function writeLog(ev: LogEvent): Promise<void> {
 
 // Shown only when Notion is not configured, so the app can be tried locally.
 const demo = (id: string, title: string, artist: string, yearBE: number, language: string, genre: string): Song => ({
-  id, title, artist, aliases: "", yearBE, language, genre,
+  id, title, artist, album: "", aliases: "", yearBE, language, genre, linkType: "karaoke",
   images: [`/demo-lyric.svg?song=${encodeURIComponent(title)}`],
   source: "", readability: 5, status: "ใช้ได้", plays: 0, likes: 0, dislikes: 0, youtube: "", youtubeChannel: "", lyricsLink: "", lyrics: "", licensed: true,
 });
@@ -174,10 +176,13 @@ export type AdminSong = {
   url: string;
   title: string;
   artist: string;
+  album: string;
   aliases: string;
   yearBE: number | null;
   language: string;
   genre: string;
+  /** "คาราโอเกะ", "มีเสียงร้อง", or "" to let the app decide from the channel. */
+  linkType: string;
   status: string;
   youtube: string;
   youtubeChannel: string;
@@ -200,10 +205,12 @@ function toAdminSong(page: any): AdminSong {
     url: page.url ?? "",
     title: text(p["Song"]),
     artist: text(p["Artist"]),
+    album: text(p["Album"]),
     aliases: text(p["Aliases"]),
     yearBE: num(p["Year BE"]),
     language: sel(p["Language"]),
     genre: sel(p["Genre"]),
+    linkType: sel(p["Link Type"]),
     status: sel(p["Status"]),
     youtube: url(p["YouTube"]),
     youtubeChannel: text(p["YouTube Channel"]),
@@ -240,6 +247,7 @@ export type SongInput = Partial<Omit<AdminSong, "id" | "url" | "plays" | "likes"
 
 export const SONG_STATUSES = ["รอตรวจ", "ใช้ได้", "ต้องหาใหม่"];
 export const SONG_LANGUAGES = ["ไทย", "อังกฤษ"];
+export const SONG_LINK_TYPES = ["คาราโอเกะ", "มีเสียงร้อง"];
 
 /** Notion rich text allows 2,000 characters per piece, so long text is split. */
 function richText(s: string) {
@@ -258,7 +266,9 @@ export function songProperties(input: SongInput, creating: boolean) {
     props["Song"] = { title: [{ text: { content: input.title.trim().slice(0, 200) } }] };
   } else if (creating) throw new Error("ต้องใส่ชื่อเพลง");
   if (input.artist !== undefined) props["Artist"] = richText(input.artist.trim());
+  if (input.album !== undefined) props["Album"] = richText(input.album.trim());
   if (input.aliases !== undefined) props["Aliases"] = richText(input.aliases.trim());
+  if (input.linkType !== undefined) props["Link Type"] = { select: selectOrNull(input.linkType, SONG_LINK_TYPES) };
   if (input.youtubeChannel !== undefined) props["YouTube Channel"] = richText(input.youtubeChannel.trim());
   if (input.licenseNote !== undefined) props["License Note"] = richText(input.licenseNote.trim());
   if (input.lyrics !== undefined) props["Lyrics"] = richText(input.lyrics);

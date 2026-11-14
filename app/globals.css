@@ -47,6 +47,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .card .info { flex: 1; min-width: 0; }
 .card .title { font-size: 1.35rem; font-weight: 700; overflow-wrap: anywhere; }
 .card .meta { color: var(--muted); font-size: 1rem; }
+.filters { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips-label { color: var(--muted); font-size: 1rem; min-width: 64px; }
+.chip { border: 2px solid #555; background: #111; color: var(--text); border-radius: 999px; padding: 8px 14px; font-size: 1.05rem; min-height: 44px; }
+.chip.on { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 700; }
+.badge { display: inline-block; margin-top: 6px; padding: 3px 10px; border-radius: 999px; font-size: 0.9rem; }
+.badge.karaoke { background: #1d3557; color: #cfe3ff; }
+.badge.vocal { background: #5a1d3d; color: #ffd6ea; }
 .card .num { font-size: 1.6rem; font-weight: 700; color: var(--accent); width: 36px; text-align: center; }
 .small-btn { border: 0; border-radius: 12px; background: #2a2a2a; color: var(--text); width: 52px; height: 52px; font-size: 1.3rem; }
 .empty { color: var(--muted); padding: 18px; text-align: center; background: var(--panel); border-radius: 16px; }

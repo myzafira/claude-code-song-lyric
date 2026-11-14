@@ -18,7 +18,7 @@ const TYPE_LABEL: Record<string, string> = {
   request: "ขอเพลง",
 };
 const EMPTY: Draft = {
-  title: "", artist: "", aliases: "", yearBE: null, language: "ไทย", genre: "", status: "รอตรวจ",
+  title: "", artist: "", album: "", linkType: "", aliases: "", yearBE: null, language: "ไทย", genre: "", status: "รอตรวจ",
   youtube: "", youtubeChannel: "", lyricsLink: "", licensed: false, licenseNote: "", lyrics: "", imageUrls: "",
 };
 
@@ -175,7 +175,7 @@ function SongsTab() {
     return (songs ?? []).filter(
       (s) =>
         (!status || s.status === status) &&
-        (!needle || `${s.title} ${s.artist} ${s.aliases}`.toLowerCase().includes(needle)),
+        (!needle || `${s.title} ${s.artist} ${s.album} ${s.aliases}`.toLowerCase().includes(needle)),
     );
   }, [songs, q, status]);
 
@@ -232,7 +232,7 @@ function SongForm({ initial, onCancel, onSaved }: { initial: Draft; onCancel: ()
   const [busy, setBusy] = useState(false);
   const isNew = !initial.id;
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((p) => ({ ...p, [k]: v }));
-  const field = (k: "title" | "artist" | "aliases" | "genre" | "youtube" | "youtubeChannel" | "lyricsLink" | "licenseNote", label: string, hint?: string) => (
+  const field = (k: "title" | "artist" | "album" | "aliases" | "genre" | "youtube" | "youtubeChannel" | "lyricsLink" | "licenseNote", label: string, hint?: string) => (
     <label>
       {label}
       <input value={(d[k] as string) ?? ""} onChange={(e) => set(k, e.target.value)} />
@@ -249,7 +249,7 @@ function SongForm({ initial, onCancel, onSaved }: { initial: Draft; onCancel: ()
     setBusy(true);
     setError("");
     const body = {
-      title: d.title, artist: d.artist, aliases: d.aliases, yearBE: d.yearBE ?? null, language: d.language,
+      title: d.title, artist: d.artist, album: d.album, linkType: d.linkType, aliases: d.aliases, yearBE: d.yearBE ?? null, language: d.language,
       genre: d.genre, status: d.status, youtube: d.youtube, youtubeChannel: d.youtubeChannel,
       lyricsLink: d.lyricsLink, licenseNote: d.licenseNote, licensed: d.licensed,
       ...(d.licensed ? { lyrics: d.lyrics, imageUrls: d.imageUrls } : {}),
@@ -272,6 +272,7 @@ function SongForm({ initial, onCancel, onSaved }: { initial: Draft; onCancel: ()
       <h2>{isNew ? "เพิ่มเพลงใหม่" : `แก้ไข: ${initial.title}`}</h2>
       {field("title", "ชื่อเพลง *")}
       {field("artist", "ศิลปิน")}
+      {field("album", "อัลบั้ม", "ใส่เฉพาะเมื่อตรวจจากแหล่งทางการแล้ว (เช่น หน้าอัลบั้มบน Spotify/ค่ายเพลง)")}
       {field("aliases", "ชื่ออื่น / คำค้น", "คั่นด้วยจุลภาค เช่น ชื่อท่อนฮุก หรือชื่อภาษาอังกฤษ")}
       <div className="row">
         <label>
@@ -299,6 +300,14 @@ function SongForm({ initial, onCancel, onSaved }: { initial: Draft; onCancel: ()
       </div>
       {field("youtube", "ลิงก์คลิป YouTube (ช่องทางการ)", "เช่น https://www.youtube.com/watch?v=…")}
       {field("youtubeChannel", "ชื่อช่อง YouTube", "เช่น GMM Karaoke")}
+      <label>
+        แบบคลิป
+        <select value={d.linkType ?? ""} onChange={(e) => set("linkType", e.target.value)}>
+          <option value="">ให้ระบบเดาจากชื่อช่อง (ช่องคาราโอเกะ = คาราโอเกะ)</option>
+          <option value="คาราโอเกะ">คาราโอเกะ (มีแต่ดนตรีกับเนื้อเพลง ไม่มีเสียงร้อง)</option>
+          <option value="มีเสียงร้อง">มีเสียงร้อง (MV / Lyric video)</option>
+        </select>
+      </label>
       {field("lyricsLink", "ลิงก์หน้าเนื้อเพลง (เว็บที่ได้รับลิขสิทธิ์)")}
       <label className="check">
         <input type="checkbox" checked={!!d.licensed} onChange={(e) => set("licensed", e.target.checked)} />
